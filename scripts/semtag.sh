@@ -554,7 +554,12 @@ function increase_version {
     if [[ -z "$__commitlist" ]]; then
       echo "No commits since the last final version, not bumping version"
     else
-      local __message="
+      if [[ -z "${versionname:-}" ]]; then
+        if ! versionname=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null); then
+          error_exit "Failed to generate timestamp for version name"
+        fi
+      fi
+      local __message="$versionname
 $__commitlist"
 
       # We check we have info on the user
