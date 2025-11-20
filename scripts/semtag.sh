@@ -592,6 +592,7 @@ $__commitlist"
         while IFS= read -r __remote; do
           if git push "$__remote" "$__version" >/dev/null 2>&1; then
             echo "$__version pushed to $__remote"
+            echo "TAG_NAME=$__version" >> $GITHUB_OUTPUT
           else
             error_exit "Failed to push tag $__version to remote $__remote"
           fi
