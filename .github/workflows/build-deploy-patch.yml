@@ -1,0 +1,51 @@
+name: Build and Deploy Hotfix Release
+
+on:
+  push:
+    branches:
+      - hotfix/*
+  workflow_dispatch:
+
+jobs:
+  code-build:
+    name: Build Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build code
+        run: |
+          echo "code built"
+          sleep 5
+
+  code-package:
+    name: Package Code
+    runs-on: ubuntu-latest
+    needs:
+      - code-build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Package code
+        run: |
+          echo "code packaged"
+          sleep 5
+
+  create-tag-patch:
+    name: Create Tag Patch
+    if: github.event_name == 'workflow_dispatch' || github.event.before != '0000000000000000000000000000000000000000'
+    runs-on: ubuntu-latest
+    needs: 
+      - code-package
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create tag patch
+        run: |
+          ./scripts/semtag.sh final -s patch 

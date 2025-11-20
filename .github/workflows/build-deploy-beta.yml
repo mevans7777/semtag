@@ -1,0 +1,50 @@
+name: Build and Deploy Beta Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  code-build:
+    name: Build Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build code
+        run: |
+          echo "code built"
+          sleep 5
+
+  code-package:
+    name: Package Code
+    runs-on: ubuntu-latest
+    needs:
+      - code-build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Package code
+        run: |
+          echo "code packaged"
+          sleep 5
+
+  create-tag-beta:
+    name: Create Tag Beta
+    runs-on: ubuntu-latest
+    needs:
+      - code-package
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create tag beta
+        run: |
+          ./scripts/semtag.sh beta -s minor 
