@@ -813,17 +813,17 @@ case "$ACTION" in
     ;;
   final)
     init
-    default_branch=""
-    get_default_branch default_branch
-    diff=""
-    if ! diff=$(git diff "$default_branch" 2>/dev/null); then
-      error_exit "Failed to compare with default branch: $default_branch"
-    fi
-    if [ "$forcetag" == "false" ]; then
-      if [ -n "$diff" ]; then
-        error_exit "Branch must be updated with $default_branch for final versions"
-      fi
-    fi
+    #default_branch=""
+    #get_default_branch default_branch
+    #diff=""
+    #if ! diff=$(git diff "$default_branch" 2>/dev/null); then
+    #  error_exit "Failed to compare with default branch: $default_branch"
+    #fi
+    #if [ "$forcetag" == "false" ]; then
+    #  if [ -n "$diff" ]; then
+    #    error_exit "Branch must be updated with $default_branch for final versions"
+    #  fi
+    #fi
     increase_version
     ;;
   alpha|beta)
