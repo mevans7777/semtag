@@ -41,3 +41,4 @@ For detailed setup and configuration information, see the following guides:
 
 feat 2
 fix 2
+docs 2
