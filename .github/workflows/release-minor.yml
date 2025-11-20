@@ -46,3 +46,6 @@ jobs:
           RELEASE_NOTES=$(git tag -l --format='%(contents)' ${TAG_NAME} | sed -E '1d; s/^[0-9a-fA-F]{40} //')
           echo "Release notes: $RELEASE_NOTES"
           #gh release create ${TAG_NAME} --notes "${RELEASE_NOTES}" --target "${{ github.sha }}"
+        env:
+          TAG_NAME: ${{ steps.create-tag-minor.outputs.TAG_NAME }}
+        
