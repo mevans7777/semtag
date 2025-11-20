@@ -481,7 +481,7 @@ function bump_version {
   get_next_version $finalversion $scope __candidatefromfinal
   if [[ -n "$identifier" ]]; then
     __candidatefromfinal="$__candidatefromfinal-$identifier.1"
-  fi
+    fi
 
   # Finally we compare both candidates
   local __resultversion
@@ -785,7 +785,7 @@ function init {
   check_git_repo
 
   local TAGS
-  if ! TAGS=$(git tag --merged 2>/dev/null); then
+  if ! TAGS=$(git tag 2>/dev/null); then
     error_exit "Failed to get git tags"
   fi
 
