@@ -57,6 +57,11 @@ jobs:
             sha=$(echo "$commit_line" | awk '{print $1}')
             subject=$(echo "$commit_line" | cut -d' ' -f2-)
 
+            # Only process feat and fix commits
+            if [[ "$subject" != feat* && "$subject" != fix* ]]; then
+              continue
+            fi
+
             # Get short SHA for linking
             short_sha=$(echo "$sha" | cut -c1-7)
             commit_link="[${short_sha}](${{ github.server_url }}/${{ github.repository }}/commit/${sha})"
