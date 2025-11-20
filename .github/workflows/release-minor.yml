@@ -70,10 +70,19 @@ jobs:
               pr_link=" ([#${pr_num}](${pr_url}))"
             fi
 
-            # Remove the conventional commit prefix for the final message
-            clean_subject=$(echo "$subject" | sed -E 's/^(feat|fix)(!|\([^)]+\))?: //')
+            # Remove the conventional commit prefix and PR number from the final message
+            clean_subject=$(echo "$subject" | sed -E 's/^(feat|fix)(!|\([^)]+\))?: //' | sed -E 's/ \(\#\d+\)$//')
 
-            formatted_line="* ${clean_subject}${pr_link} (${commit_link})"
+            # Linkify Jira ID if present at the start of the subject
+            jira_id=$(echo "$clean_subject" | grep -oE '^[A-Z]+-[0-9]+')
+            if [[ -n "$jira_id" ]]; then
+              jira_link="[${jira_id}](https://pumaglobal.atlassian.net/browse/${jira_id})"
+              # Replace the plain text ID with the markdown link
+              linked_subject=$(echo "$clean_subject" | sed "s/${jira_id}/${jira_link}/")
+              formatted_line="* ${linked_subject}${pr_link} (${commit_link})"
+            else
+              formatted_line="* ${clean_subject}${pr_link} (${commit_link})"
+            fi
 
             if [[ "$subject" == feat* ]]; then
               FEATURES="${FEATURES}${formatted_line}\n"
