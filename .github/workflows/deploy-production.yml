@@ -33,5 +33,5 @@ jobs:
       - name: Deploy Production
         run: |
           echo "Deploying to production"
-          sleep 5
+          sleep 1
 
