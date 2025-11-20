@@ -786,7 +786,7 @@ function init {
   check_git_repo
 
   local TAGS
-  if ! TAGS=$(git tag 2>/dev/null); then
+  if ! TAGS=$(git tag --sort=v:refname 2>/dev/null); then
     error_exit "Failed to get git tags"
   fi
 
