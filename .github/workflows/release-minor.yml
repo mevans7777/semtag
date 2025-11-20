@@ -78,7 +78,7 @@ jobs:
             if [[ -n "$jira_id" ]]; then
               jira_link="[${jira_id}](https://pumaglobal.atlassian.net/browse/${jira_id})"
               # Replace the plain text ID with the markdown link
-              linked_subject=$(echo "$clean_subject" | sed "s/${jira_id}/${jira_link}/")
+              linked_subject=$(echo "$clean_subject" | sed "s#${jira_id}#${jira_link}#")
               formatted_line="* ${linked_subject}${pr_link} (${commit_link})"
             else
               formatted_line="* ${clean_subject}${pr_link} (${commit_link})"
