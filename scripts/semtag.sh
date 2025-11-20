@@ -400,7 +400,11 @@ function get_latest {
             get_latest_of_two "$finalversion" "$__current" finalversion
             get_latest_of_two "$lastversion" "$finalversion" lastversion
           else
-            get_latest_of_two "$lastversion" "$__current" lastversion
+            local __compare
+            compare_versions "$__current" "$finalversion" __compare
+            if [ "$__compare" -ge 0 ]; then
+              get_latest_of_two "$lastversion" "$__current" lastversion
+            fi
           fi
         fi
       done
@@ -450,7 +454,11 @@ function bump_version {
 
   local __candidatefromlast=$FIRST_VERSION
   local __explodedlast
-  explode_version $lastversion __explodedlast
+  local __bumping_from=$lastversion
+  if [[ -z "$identifier" ]]; then
+    __bumping_from=$finalversion
+  fi
+  explode_version $__bumping_from __explodedlast
   if [[ -n "${__explodedlast[3]}" ]]; then
     # Last version is not final
     local __idlast
