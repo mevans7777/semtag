@@ -61,15 +61,6 @@ jobs:
             short_sha=$(echo "$sha" | cut -c1-7)
             commit_link="[${short_sha}](${{ github.server_url }}/${{ github.repository }}/commit/${sha})"
 
-            # Find the associated PR
-            pr_info=$(gh pr list --search "${sha}" --state merged --json number,url --limit 1)
-            pr_link=""
-            if [[ -n "$pr_info" && "$pr_info" != "[]" ]]; then
-              pr_num=$(echo "$pr_info" | jq -r '.[0].number')
-              pr_url=$(echo "$pr_info" | jq -r '.[0].url')
-              pr_link=" ([#${pr_num}](${pr_url}))"
-            fi
-
             # Remove the conventional commit prefix and PR number from the final message
             clean_subject=$(echo "$subject" | sed -E 's/^(feat|fix)(!|\([^)]+\))?: //' | sed -E 's/ \(\#\d+\)$//')
 
@@ -79,9 +70,9 @@ jobs:
               jira_link="[${jira_id}](https://pumaglobal.atlassian.net/browse/${jira_id})"
               # Replace the plain text ID with the markdown link
               linked_subject=$(echo "$clean_subject" | sed "s#${jira_id}#${jira_link}#")
-              formatted_line="* ${linked_subject}${pr_link} (${commit_link})"
+              formatted_line="* ${linked_subject} (${commit_link})"
             else
-              formatted_line="* ${clean_subject}${pr_link} (${commit_link})"
+              formatted_line="* ${clean_subject} (${commit_link})"
             fi
 
             if [[ "$subject" == feat* ]]; then
