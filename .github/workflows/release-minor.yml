@@ -47,5 +47,6 @@ jobs:
           echo "Release notes: $RELEASE_NOTES"
           gh release create ${TAG_NAME} --notes "${RELEASE_NOTES}" --target "${{ github.sha }}"
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ steps.create-tag-minor.outputs.TAG_NAME }}
         
