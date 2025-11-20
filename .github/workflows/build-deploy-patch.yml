@@ -47,5 +47,61 @@ jobs:
           fetch-tags: true
 
       - name: Create tag patch
+        id: create-tag-patch
         run: |
           ./scripts/semtag.sh final -s patch 
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.create-tag-patch.outputs.TAG_NAME }}
+        run: |
+          # Get the commit list directly from the annotated tag's message body
+          # The 'sed 1d' removes the first line (which is blank or a timestamp)
+          COMMIT_LOG=$(git tag -l --format='%(contents)' "${TAG_NAME}" | sed '1d')
+
+          FEATURES=""
+          FIXES=""
+
+          while IFS= read -r commit_line; do
+            # Extract SHA and subject from the line (format is 'sha subject')
+            sha=$(echo "$commit_line" | awk '{print $1}')
+            subject=$(echo "$commit_line" | cut -d' ' -f2-)
+
+            # Get short SHA for linking
+            short_sha=$(echo "$sha" | cut -c1-7)
+            commit_link="[${short_sha}](${{ github.server_url }}/${{ github.repository }}/commit/${sha})"
+
+            # Remove the conventional commit prefix and PR number from the final message
+            clean_subject=$(echo "$subject" | sed -E 's/^(feat|fix)(!|\([^)]+\))?: //' | sed -E 's/ \(\#\d+\)$//')
+
+            # Linkify Jira ID if present at the start of the subject
+            jira_id=$(echo "$clean_subject" | grep -oE '^[A-Z]+-[0-9]+')
+            if [[ -n "$jira_id" ]]; then
+              jira_link="[${jira_id}](https://pumaglobal.atlassian.net/browse/${jira_id})"
+              # Replace the plain text ID with the markdown link
+              linked_subject=$(echo "$clean_subject" | sed "s#${jira_id}#${jira_link}#")
+              formatted_line="* ${linked_subject} (${commit_link})"
+            else
+              formatted_line="* ${clean_subject} (${commit_link})"
+            fi
+
+            if [[ "$subject" == feat* ]]; then
+              FEATURES="${FEATURES}${formatted_line}\n"
+            elif [[ "$subject" == fix* ]]; then
+              FIXES="${FIXES}${formatted_line}\n"
+            fi
+          done <<< "$COMMIT_LOG"
+
+          RELEASE_NOTES=""
+          if [[ -n "$FEATURES" ]]; then
+            RELEASE_NOTES="### Features\n\n${FEATURES}"
+          fi
+          if [[ -n "$FIXES" ]]; then
+            RELEASE_NOTES="${RELEASE_NOTES}\n### Bug Fixes\n\n${FIXES}"
+          fi
+
+          # Write the release notes to a file
+          echo -e "$RELEASE_NOTES" > release_notes.md
+
+          gh release create "${TAG_NAME}" --notes-file "release_notes.md" --title "${TAG_NAME}" --target "${{ github.sha }}"
