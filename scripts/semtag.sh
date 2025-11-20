@@ -537,11 +537,11 @@ function increase_version {
     fi
     local __commitlist
     if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
-      if ! __commitlist=$(git log --pretty=oneline 2>/dev/null); then
+      if ! __commitlist=$(git log --pretty=oneline --first-parent 2>/dev/null); then
         error_exit "Failed to get git commit log"
       fi
     else
-      if ! __commitlist=$(git log --pretty=oneline "$finalversion"... 2>/dev/null); then
+      if ! __commitlist=$(git log --pretty=oneline --first-parent "$finalversion"... 2>/dev/null); then
         error_exit "Failed to get git commit log from $finalversion"
       fi
     fi
