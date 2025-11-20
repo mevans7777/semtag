@@ -38,6 +38,3 @@ For detailed setup and configuration information, see the following guides:
 
 ### Setup & Development
 - [Repository Setup](./docs/repository-setup.md) - GitHub repository configuration and branch protection
-
-v1.2.0-beta.1
-v1.2.0-neta.2
