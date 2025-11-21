@@ -537,7 +537,7 @@ function increase_version {
       if ! __commitlist=$(git log --pretty=oneline --first-parent "$lastversion"...HEAD --not $(git rev-list "$lastversion") 2>/dev/null); then
         error_exit "Failed to get git commit log from $lastversion"
       fi
-      #echo "COMMITLIST=$__commitlist"
+      echo "COMMITLIST=$__commitlist"
     fi
 
   else
