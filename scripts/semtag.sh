@@ -542,6 +542,7 @@ function increase_version {
         error_exit "Failed to get git commit log from $finalversion"
       fi
     fi
+    echo "COMMITLIST=$__commitlist"
   else
     if [ "$forcetag" == "false" ]; then
       check_git_dirty_status
