@@ -533,14 +533,8 @@ function increase_version {
     echo "$__version"
     echo "TAG_NAME=$__version" >> $GITHUB_OUTPUT
     local __commitlist
-    if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
-      if ! __commitlist=$(git log --pretty=oneline --first-parent 2>/dev/null); then
-        error_exit "Failed to get git commit log"
-      fi
-    else
-      if ! __commitlist=$(git log --pretty=oneline --first-parent "$finalversion"...HEAD --not $(git rev-list "$finalversion") 2>/dev/null); then
-        error_exit "Failed to get git commit log from $finalversion"
-      fi
+    if ! __commitlist=$(git log --pretty=oneline --first-parent "$lastversion"...HEAD --not $(git rev-list "$lastversion") 2>/dev/null); then
+      error_exit "Failed to get git commit log from $lastversion"
     fi
     echo "COMMITLIST=$__commitlist"
   else
