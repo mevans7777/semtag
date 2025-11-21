@@ -533,10 +533,13 @@ function increase_version {
     echo "$__version"
     echo "TAG_NAME=$__version" >> $GITHUB_OUTPUT
     local __commitlist
-    if ! __commitlist=$(git log --pretty=oneline --first-parent "$lastversion"...HEAD --not $(git rev-list "$lastversion") 2>/dev/null); then
-      error_exit "Failed to get git commit log from $lastversion"
+    if [ -n "${identifier:-}" ] && { [ "$identifier" = 'beta' ] || [ "$identifier" = 'alpha' ] || [ "$identifier" = 'rc' ]; }; then
+      if ! __commitlist=$(git log --pretty=oneline --first-parent "$lastversion"...HEAD --not $(git rev-list "$lastversion") 2>/dev/null); then
+        error_exit "Failed to get git commit log from $lastversion"
+      fi
+      #echo "COMMITLIST=$__commitlist"
     fi
-    echo "COMMITLIST=$__commitlist"
+
   else
     if [ "$forcetag" == "false" ]; then
       check_git_dirty_status
