@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Create tag beta
+      - name: Next tag beta
         id: next-tag-beta
         run: |
           ./scripts/semtag.sh beta -s minor -o

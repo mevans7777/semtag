@@ -546,7 +546,6 @@ function increase_version {
     if [ "$forcetag" == "false" ]; then
       check_git_dirty_status
     fi
-    fi
     local __commitlist
     if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
       if ! __commitlist=$(git log --pretty=oneline --first-parent 2>/dev/null); then
