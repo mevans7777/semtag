@@ -7,15 +7,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  next-tag-beta:
+    name: Next Tag Beta
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      VERSION: ${{ steps.next-tag-beta.outputs.TAG_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create tag beta
+        id: next-tag-beta
+        run: |
+          ./scripts/semtag.sh beta -s minor -o
+
   code-build:
     name: Build Code
     runs-on: ubuntu-latest
+    needs:
+      - next-tag-beta
     steps:
       - uses: actions/checkout@v4
       
       - name: Build code
         run: |
-          echo "code built"
+          echo "code built ${{ needs.next-tag-beta.outputs.VERSION }}"
           sleep 1
 
   code-package:
@@ -31,11 +52,39 @@ jobs:
           echo "code packaged"
           sleep 1
 
+  deploy-development:
+    name: Deploy Development
+    runs-on: ubuntu-latest
+    needs:
+      - code-package
+    environment:
+      name: development
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Production
+        run: |
+          echo "Deploying to production"
+          sleep 1
+
+  e2e-test:
+    name: E2E Test
+    runs-on: ubuntu-latest
+    needs:
+      - deploy-development
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: E2E Test
+        run: |
+          echo "E2E Test"
+          sleep 1
+
   create-tag-beta:
     name: Create Tag Beta
     runs-on: ubuntu-latest
     needs:
-      - code-package
+      - e2e-test
     permissions:
       contents: write
     steps:
