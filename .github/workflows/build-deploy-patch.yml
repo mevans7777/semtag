@@ -37,7 +37,7 @@ jobs:
       - name: Next tag
         id: next-tag
         run: |
-          ./scripts/semtag.sh find -s patch -o
+          ./scripts/semtag.sh final -s patch -o
 
   code-build:
     name: Build Code
