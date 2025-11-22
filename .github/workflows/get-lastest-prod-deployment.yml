@@ -1,20 +1,10 @@
 name: Get Latest Successful Deployment Ref for Environment
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment to query (e.g., production, staging)'
-        required: true
-        default: 'production'
-      wait_timeout_minutes:
-        description: 'Maximum minutes to wait for an in-progress deployment to complete'
-        required: false
-        default: '300' # Default wait up to 5 minutes
-      poll_interval_seconds:
-        description: 'How often to poll status of in-progress deployment'
-        required: false
-        default: '10' # Poll every 10 seconds
 
 jobs:
   find_successful_deployment:
@@ -22,11 +12,6 @@ jobs:
     permissions:
       contents: read
       deployments: read # Necessary to read deployment and deployment status data
-  
-    outputs:
-      successful_deployment_ref: ${{ steps.find_deploy.outputs.successful_deployment_ref }}
-      successful_deployment_id: ${{ steps.find_deploy.outputs.successful_deployment_id }}
-      successful_deployment_url: ${{ steps.find_deploy.outputs.successful_deployment_url }}
   
     steps:
       - name: Checkout repository (optional, but good practice)
@@ -39,6 +24,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
+          environment: 'production'
 
       - name: Display Deployment Ref
         run: |
