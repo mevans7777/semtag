@@ -57,6 +57,11 @@ jobs:
             --jq '. | sort_by(.updated_at) | reverse | .[] | select(.workflow_run != null)' \
             "/repos/$OWNER/$REPO/deployments?environment=$ENVIRONMENT&per_page=100"
 
+          echo "Debug: Deployments list (jq filtered):"
+          gh api \
+            "/repos/$OWNER/$REPO/deployments?environment=$ENVIRONMENT&per_page=100" \
+            --jq 'sort_by(.updated_at) | reverse | .[]'
+
           exit 0
           # Function to get the latest status of a deployment
           get_latest_status() {
