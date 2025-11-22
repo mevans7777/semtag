@@ -35,6 +35,8 @@ jobs:
       - name: Find Latest Successful Deployment
         id: find_deploy
         uses: ./.github/actions/get-latest-successful-deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Display Deployment Ref
         run: |
