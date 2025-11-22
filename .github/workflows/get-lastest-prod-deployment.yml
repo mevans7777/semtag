@@ -32,8 +32,8 @@ jobs:
       - name: Checkout repository (optional, but good practice)
         uses: actions/checkout@v4
   
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+#      - name: Install jq
+#        run: sudo apt-get update && sudo apt-get install -y jq
   
       - name: Find Latest Successful Deployment
         id: find_deploy
@@ -49,6 +49,12 @@ jobs:
           echo "Max wait time for in-progress deployments: $MAX_WAIT_SECONDS seconds"
           echo "Polling interval: $POLL_INTERVAL_SECONDS seconds"
   
+
+          gh api \
+            --jq '. | sort_by(.updated_at) | reverse | .[] | select(.workflow_run != null)' \
+            "/repos/$OWNER/$REPO/deployments?environment=$ENVIRONMENT&per_page=100"
+
+          exit 0
           # Function to get the latest status of a deployment
           get_latest_status() {
             local statuses_url="$1"
