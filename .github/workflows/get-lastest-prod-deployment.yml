@@ -1,9 +1,6 @@
 name: Get Latest Successful Deployment Ref for Environment
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -17,7 +14,7 @@ jobs:
       - name: Checkout repository (optional, but good practice)
         uses: actions/checkout@v4
 
-      - name: Find Latest Successful Deployment
+      - name: Find Latest Successful Production Deployment
         id: find_deploy
         uses: ./.github/actions/get-latest-successful-deployment
         with:

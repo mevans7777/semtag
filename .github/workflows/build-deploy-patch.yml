@@ -7,34 +7,71 @@ on:
   workflow_dispatch:
 
 jobs:
+  next-tag:
+    name: Next Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      VERSION: ${{ steps.next-tag.outputs.TAG_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Find Latest Successful Production Deployment
+        id: find_deploy
+        uses: ./.github/actions/get-latest-successful-deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          environment: 'production'
+
+      - name: Display Deployment Ref
+        run: |
+          echo "${{ steps.find_deploy.outputs.successful_deployment_ref }}"
+
+      - name: Next tag
+        id: next-tag
+        run: |
+          ./scripts/semtag.sh find -s patch -o
+
   code-build:
     name: Build Code
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.before != '0000000000000000000000000000000000000000'
+    needs:
+      - next-tag
     steps:
       - uses: actions/checkout@v4
       
       - name: Build code
         run: |
-          echo "code built"
+          echo "code built ${{ needs.next-tag.outputs.VERSION }}"
           sleep 1
 
   code-package:
     name: Package Code
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.before != '0000000000000000000000000000000000000000'
     needs:
       - code-build
+      - next-tag
     steps:
       - uses: actions/checkout@v4
       
       - name: Package code
         run: |
-          echo "code packaged"
+          echo "code built ${{ needs.next-tag.outputs.VERSION }}"
           sleep 1
 
   create-tag-patch:
     name: Create Tag Patch
-    if: github.event_name == 'workflow_dispatch' || github.event.before != '0000000000000000000000000000000000000000'
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.before != '0000000000000000000000000000000000000000'
     needs: 
       - code-package
     permissions:
