@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Next tag based on prod deployment
+      - name: Next tag
         id: next-tag
         run: |
           ./scripts/semtag.sh final -s patch -o 

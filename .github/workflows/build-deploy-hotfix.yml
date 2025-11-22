@@ -34,7 +34,7 @@ jobs:
         run: |
           echo "${{ steps.find_deploy.outputs.successful_deployment_ref }}"
 
-      - name: Next tag based on prod deployment
+      - name: Next tag
         id: next-tag
         run: |
           ./scripts/semtag.sh final -s patch -o -t $(echo "${{ steps.find_deploy.outputs.successful_deployment_ref }}" | sed -E 's/(\.)[0-9]+$/\1/')
