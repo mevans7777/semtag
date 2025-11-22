@@ -1,9 +1,9 @@
-name: Build and Deploy Patch Release
+name: Build and Deploy Hotfix Release
 
 on:
   push:
     branches:
-      - patch/*
+      - hotfix/*
   workflow_dispatch:
 
 jobs:
@@ -21,10 +21,23 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Find Latest Successful Production Deployment
+        id: find_deploy
+        uses: ./.github/actions/get-latest-successful-deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          environment: 'production'
+
+      - name: Display Deployment Ref
+        run: |
+          echo "${{ steps.find_deploy.outputs.successful_deployment_ref }}"
+
       - name: Next tag based on prod deployment
         id: next-tag
         run: |
-          ./scripts/semtag.sh final -s patch -o 
+          ./scripts/semtag.sh final -s patch -o -t $(echo "${{ steps.find_deploy.outputs.successful_deployment_ref }}" | sed -E 's/(\.)[0-9]+$/\1/')
 
 #  code-build:
 #    name: Build Code
