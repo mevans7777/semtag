@@ -38,7 +38,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
-          repo: ${{ github.repository }}
+          repo: ${{ github.event.repository.name }}
 
       - name: Display Deployment Ref
         run: |
