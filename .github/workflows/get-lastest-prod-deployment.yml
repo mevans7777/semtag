@@ -37,6 +37,8 @@ jobs:
         uses: ./.github/actions/get-latest-successful-deployment
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.repository }}
 
       - name: Display Deployment Ref
         run: |

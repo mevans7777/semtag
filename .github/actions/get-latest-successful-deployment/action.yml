@@ -8,14 +8,13 @@ inputs:
   owner:
     description: Repository owner
     required: true
-    default: ${{ github.repository_owner }}
   repo:
     description: Repository name
     required: true
-    default: ${{ github.repository }}
   environment:
     description: Deployment environment name (e.g. production, staging)
     required: true
+    default: 'production'
   wait_timeout_minutes:
     description: Maximum minutes to wait for in-progress deployments
     required: false
