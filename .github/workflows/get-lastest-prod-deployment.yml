@@ -1,0 +1,167 @@
+name: Get Latest Successful Deployment Ref for Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment to query (e.g., production, staging)'
+        required: true
+        default: 'production'
+      wait_timeout_minutes:
+        description: 'Maximum minutes to wait for an in-progress deployment to complete'
+        required: false
+        default: '300' # Default wait up to 5 minutes
+      poll_interval_seconds:
+        description: 'How often to poll status of in-progress deployment'
+        required: false
+        default: '10' # Poll every 10 seconds
+
+jobs:
+  find_successful_deployment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read # Necessary to read deployment and deployment status data
+  
+    outputs:
+      successful_deployment_ref: ${{ steps.find_deploy.outputs.successful_deployment_ref }}
+      successful_deployment_id: ${{ steps.find_deploy.outputs.successful_deployment_id }}
+      successful_deployment_url: ${{ steps.find_deploy.outputs.successful_deployment_url }}
+  
+    steps:
+      - name: Checkout repository (optional, but good practice)
+        uses: actions/checkout@v4
+  
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+  
+      - name: Find Latest Successful Deployment
+        id: find_deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          MAX_WAIT_SECONDS: ${{ github.event.inputs.wait_timeout_minutes }}
+          POLL_INTERVAL_SECONDS: ${{ github.event.inputs.poll_interval_seconds }}
+        run: |
+          echo "Starting search for the latest successful deployment in environment: $ENVIRONMENT"
+          echo "Max wait time for in-progress deployments: $MAX_WAIT_SECONDS seconds"
+          echo "Polling interval: $POLL_INTERVAL_SECONDS seconds"
+  
+          # Function to get the latest status of a deployment
+          get_latest_status() {
+            local statuses_url="$1"
+            local latest_status_json=$(gh api "$statuses_url" --jq 'sort_by(.created_at) | reverse | .[0]')
+            if [[ -n "$latest_status_json" ]]; then
+              echo "$latest_status_json"
+            else
+              echo "{}" # Return empty JSON if no statuses
+            fi
+          }
+  
+          SUCCESSFUL_REF=""
+          SUCCESSFUL_ID=""
+          SUCCESSFUL_URL=""
+  
+          # 1. Fetch deployments for the environment, sorted by updated_at descending
+          # We take a generous number (100) to ensure we find a recent successful one.
+          # Filter for deployments created by workflow_run if possible, as these are most common for CI/CD.
+          DEPLOYMENTS_JSON=$(gh api \
+            --jq '. | sort_by(.updated_at) | reverse | .[] | select(.workflow_run != null)' \
+            "/repos/$OWNER/$REPO/deployments?environment=$ENVIRONMENT&per_page=100")
+  
+          if [[ -z "$DEPLOYMENTS_JSON" ]]; then
+            echo "No deployments found for environment '$ENVIRONMENT'."
+            exit 1
+          fi
+  
+          # Read deployments into a bash array for easier iteration
+          # `jq -c '.'` ensures each object is on a single line
+          readarray -t DEPLOYMENT_ARRAY < <(echo "$DEPLOYMENTS_JSON" | jq -c '.')
+  
+          # 2. Loop through deployments from most recent to oldest
+          for DEPLOYMENT_ENTRY in "${DEPLOYMENT_ARRAY[@]}"; do
+            DEPLOYMENT_ID=$(echo "$DEPLOYMENT_ENTRY" | jq -r '.id')
+            DEPLOYMENT_REF=$(echo "$DEPLOYMENT_ENTRY" | jq -r '.ref')
+            DEPLOYMENT_URL=$(echo "$DEPLOYMENT_ENTRY" | jq -r '.url') # The API URL for the deployment
+            DEPLOYMENT_STATUSES_URL=$(echo "$DEPLOYMENT_ENTRY" | jq -r '.statuses_url')
+            DEPLOYMENT_CREATED_AT=$(echo "$DEPLOYMENT_ENTRY" | jq -r '.created_at')
+  
+            echo "--- Checking deployment ID: $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF, Created: $DEPLOYMENT_CREATED_AT) ---"
+  
+            # Get the latest status for this deployment
+            LATEST_STATUS_JSON=$(get_latest_status "$DEPLOYMENT_STATUSES_URL")
+            CURRENT_STATE=$(echo "$LATEST_STATUS_JSON" | jq -r '.state // "unknown"') # Default to unknown if state missing
+  
+            case "$CURRENT_STATE" in
+              "success")
+                echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) is already successful."
+                SUCCESSFUL_REF="$DEPLOYMENT_REF"
+                SUCCESSFUL_ID="$DEPLOYMENT_ID"
+                SUCCESSFUL_URL="$DEPLOYMENT_URL"
+                break # Found our target, exit the main loop
+                ;;
+  
+              "inactive"|"failure"|"error")
+                echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) is in a terminal non-success state: $CURRENT_STATE. Skipping."
+                continue # Go to the next (older) deployment
+                ;;
+  
+              "pending"|"queued"|"in_progress")
+                echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) is $CURRENT_STATE. Waiting for it to complete..."
+                
+                ELAPSED_TIME=0
+                while [[ "$ELAPSED_TIME" -lt "$MAX_WAIT_SECONDS" ]]; do
+                  sleep "$POLL_INTERVAL_SECONDS"
+                  ELAPSED_TIME=$(( ELAPSED_TIME + POLL_INTERVAL_SECONDS ))
+  
+                  LATEST_STATUS_JSON=$(get_latest_status "$DEPLOYMENT_STATUSES_URL")
+                  NEW_STATE=$(echo "$LATEST_STATUS_JSON" | jq -r '.state // "unknown"')
+  
+                  if [[ "$NEW_STATE" == "success" ]]; then
+                    echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) completed successfully after $((ELAPSED_TIME / 60)) minutes."
+                    SUCCESSFUL_REF="$DEPLOYMENT_REF"
+                    SUCCESSFUL_ID="$DEPLOYMENT_ID"
+                    SUCCESSFUL_URL="$DEPLOYMENT_URL"
+                    break 2 # Break out of both inner (wait) and outer (deployment) loops
+                  elif [[ "$NEW_STATE" == "failure" || "$NEW_STATE" == "error" || "$NEW_STATE" == "inactive" ]]; then
+                    echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) finished with state: $NEW_STATE. It did not succeed. Moving to the next older deployment."
+                    break # Break out of inner (wait) loop, continue outer loop
+                  elif [[ "$NEW_STATE" != "$CURRENT_STATE" ]]; then
+                    echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) state changed from $CURRENT_STATE to $NEW_STATE."
+                    CURRENT_STATE="$NEW_STATE"
+                  fi
+                  echo "Still waiting for deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF). Current state: $CURRENT_STATE ($((MAX_WAIT_SECONDS - ELAPSED_TIME))s remaining)"
+                done
+  
+                # If we reach here and SUCCESSFUL_REF is not set, it means the wait timed out or it failed.
+                if [[ -z "$SUCCESSFUL_REF" ]]; then
+                  echo "Waiting for deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) timed out or it didn't succeed within the allocated time ($WAIT_TIMEOUT_MINUTES minutes). Moving to the next older deployment."
+                fi
+                ;;
+              
+              *)
+                echo "Deployment $DEPLOYMENT_ID (Ref: $DEPLOYMENT_REF) has an unexpected state: $CURRENT_STATE. Skipping."
+                continue # Go to the next (older) deployment
+                ;;
+            esac
+  
+            # If SUCCESSFUL_REF was set inside the loop, it means we found what we needed.
+            # This check ensures we truly break the outer loop if a success was found.
+            if [[ -n "$SUCCESSFUL_REF" ]]; then
+              break
+            fi
+  
+          done # End of deployment array loop
+  
+          # 3. Output the result
+          if [[ -n "$SUCCESSFUL_REF" ]]; then
+            echo "::set-output name=successful_deployment_ref::$SUCCESSFUL_REF"
+            echo "::set-output name=successful_deployment_id::$SUCCESSFUL_ID"
+            echo "::set-output name=successful_deployment_url::$SUCCESSFUL_URL"
+            echo "Successfully identified the ref for the latest successful deployment for environment '$ENVIRONMENT': $SUCCESSFUL_REF (ID: $SUCCESSFUL_ID)"
+          else
+            echo "Error: No successful deployment found for environment '$ENVIRONMENT' after checking available deployments and waiting for in-progress ones."
+            exit 1 # Fail the job if no successful deployment is found
+          fi
