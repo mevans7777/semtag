@@ -40,6 +40,7 @@ prefix="v"
 forcedversion=
 versionname=
 identifier=
+tag_filter=
 
 HELP="\
 Usage:
@@ -105,7 +106,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 # We get the parameters
-while getopts "v:s:ofp" opt; do
+while getopts "v:s:ofpt:" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -123,6 +124,9 @@ while getopts "v:s:ofp" opt; do
       ;;
     p)
       prefix=""
+      ;;
+    t)
+      tag_filter="$OPTARG"
       ;;
     \?)
       error_exit "Invalid option: -$OPTARG"
@@ -804,8 +808,14 @@ function init {
   check_git_repo
 
   local TAGS
-  if ! TAGS=$(git tag --sort=v:refname 2>/dev/null); then
-    error_exit "Failed to get git tags"
+  if [ -z "${tag_filter:-}" ]; then
+    if ! TAGS=$(git tag --sort=v:refname 2>/dev/null); then
+      error_exit "Failed to get git tags"
+    fi
+  else
+    if ! TAGS=$(git tag --sort=v:refname | grep "$tag_filter" 2>/dev/null); then
+      error_exit "Failed to get git tags"
+    fi
   fi
 
   local TAG_ARRAY
