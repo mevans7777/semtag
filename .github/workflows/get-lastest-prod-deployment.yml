@@ -69,7 +69,7 @@ jobs:
           # Filter for deployments created by workflow_run if possible, as these are most common for CI/CD.
           DEPLOYMENTS_JSON=$(gh api \
             "/repos/$OWNER/$REPO/deployments?environment=$ENVIRONMENT&per_page=100" \
-            --jq 'sort_by(.updated_at) | reverse | .[]')
+            --jq 'sort_by(.id) | reverse | .[]')
 
           if [[ -z "$DEPLOYMENTS_JSON" ]]; then
             echo "No deployments found for environment '$ENVIRONMENT'."
