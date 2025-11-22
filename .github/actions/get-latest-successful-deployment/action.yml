@@ -5,12 +5,15 @@ inputs:
   github_token:
     description: GitHub token with access to deployments API
     required: true
+    default: ${{ secrets.GITHUB_TOKEN }}
   owner:
     description: Repository owner
     required: true
+    default: ${{ github.repository_owner }}
   repo:
     description: Repository name
     required: true
+    default: ${{ github.repository }}
   environment:
     description: Deployment environment name (e.g. production, staging)
     required: true
