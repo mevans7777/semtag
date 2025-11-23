@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: build-deploy-beta
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   next-tag-beta:
