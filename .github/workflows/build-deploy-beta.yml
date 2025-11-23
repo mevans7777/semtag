@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: build-deploy-beta
+  cancel-in-progress: true
+
 jobs:
   next-tag-beta:
     name: Next Tag Beta
