@@ -1,0 +1,102 @@
+name: HK Beta Tags Cleanup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup-beta-tags:
+    name: Cleanup old beta tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Find Latest Successful Production Deployment
+        id: find_deploy
+        uses: ./.github/actions/get-latest-successful-deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          environment: 'production'
+
+      - name: Show current production deployment ref
+        run: |
+          echo "Latest successful production deployment ref: ${{ steps.find_deploy.outputs.successful_deployment_ref }}"
+
+      - name: Delete old beta tags
+        env:
+          PROD_REF: ${{ steps.find_deploy.outputs.successful_deployment_ref }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PROD_REF}" ]; then
+            echo "No successful production deployment ref found; nothing to clean up."
+            exit 0
+          fi
+
+          # Derive the base production version (vX.Y.Z) from the deployment ref/tag.
+          # This strips any leading 'refs/tags/', prerelease, or build metadata segments.
+          PROD_TAG=$(echo "${PROD_REF}" | sed -E 's#^refs/tags/##')
+          PROD_BASE=$(echo "${PROD_TAG}" | sed -E 's/^(v?[0-9]+\.[0-9]+\.[0-9]+).*$/\1/')
+
+          if ! echo "${PROD_BASE}" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Could not parse a base semantic version from production ref '${PROD_REF}' (got '${PROD_BASE}')."
+            exit 1
+          fi
+
+          # Normalize to a leading 'v' for comparison consistency
+          case "${PROD_BASE}" in
+            v*) PROD_BASE_NORM="${PROD_BASE}" ;;
+            *)  PROD_BASE_NORM="v${PROD_BASE}" ;;
+          esac
+
+          echo "Production base version: ${PROD_BASE_NORM}"
+
+          # List all beta tags (vX.Y.Z-beta.N) sorted semantically
+          mapfile -t BETA_TAGS < <(git tag -l 'v[0-9]*.[0-9]*.[0-9]*-beta.[0-9]*' | sort -V)
+
+          if [ ${#BETA_TAGS[@]} -eq 0 ]; then
+            echo "No beta tags found; nothing to clean up."
+            exit 0
+          fi
+
+          echo "Found beta tags:"
+          printf '  %s\n' "${BETA_TAGS[@]}"
+
+          DELETED=0
+
+          for TAG in "${BETA_TAGS[@]}"; do
+            BASE_TAG=$(echo "${TAG}" | sed -E 's/(-beta\.[0-9]+)$//')
+
+            # Ensure BASE_TAG has a leading 'v' for comparison
+            case "${BASE_TAG}" in
+              v*) BASE_NORM="${BASE_TAG}" ;;
+              *)  BASE_NORM="v${BASE_TAG}" ;;
+            esac
+
+            # Compare BASE_NORM and PROD_BASE_NORM using version sort.
+            # If BASE_NORM <= PROD_BASE_NORM, delete the beta tag.
+            LOWEST=$(printf '%s\n%s\n' "${BASE_NORM}" "${PROD_BASE_NORM}" | sort -V | head -n1)
+
+            if [ "${LOWEST}" = "${BASE_NORM}" ] && [ "${BASE_NORM}" != "${PROD_BASE_NORM}" ]; then
+              echo "Deleting beta tag '${TAG}' (base ${BASE_NORM} is older than production ${PROD_BASE_NORM})"
+            elif [ "${BASE_NORM}" = "${PROD_BASE_NORM}" ]; then
+              echo "Deleting beta tag '${TAG}' (base ${BASE_NORM} is the current production version)"
+            else
+              echo "Keeping beta tag '${TAG}' (base ${BASE_NORM} is newer than production ${PROD_BASE_NORM})"
+              continue
+            fi
+
+            echo "DRY RUN: would run 'git tag -d ${TAG}'"
+            echo "DRY RUN: would run 'git push origin :refs/tags/${TAG}'"
+            DELETED=$((DELETED + 1))
+          done
+
+          echo "Deleted ${DELETED} beta tag(s)."
