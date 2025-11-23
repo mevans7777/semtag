@@ -7,7 +7,7 @@ This document describes how releases are created and promoted, including standar
 Standard releases are driven from the `main` branch and are created from pull requests that have been reviewed, approved, and merged. Code merged into `main` **must be in a production-ready state**.
 
 - **Trigger**: Merge of a PR to `main` (i.e. a push to `main`).
-- **Pipeline**: Build → deploy → test the head of `main`.
+- **Pipeline**: Build → deploy → test the commit on `main` created by the merged PR.
 - **Beta tag**: If tests pass, a beta tag is created.
 - **Promotion**: The beta tag can be manually promoted to a release tag by running the workflow against that specific beta tag.
 - **Deployment**: The release tag can then be deployed to the desired environment.
