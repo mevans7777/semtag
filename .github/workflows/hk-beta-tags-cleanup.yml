@@ -94,8 +94,8 @@ jobs:
               continue
             fi
 
-            echo "DRY RUN: would run 'git tag -d ${TAG}'"
-            echo "DRY RUN: would run 'git push origin :refs/tags/${TAG}'"
+            git tag -d "${TAG}" || true
+            git push origin ":refs/tags/${TAG}" || true
             DELETED=$((DELETED + 1))
           done
 
