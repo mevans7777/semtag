@@ -38,3 +38,4 @@ For detailed setup and configuration information, see the following guides:
 
 ### Setup & Development
 - [Repository Setup](./docs/repository-setup.md) - GitHub repository configuration and branch protection
+- [Release Process](./docs/release-process.md) - Release process and workflow
